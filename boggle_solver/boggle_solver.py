@@ -13,17 +13,17 @@ def main():
              ['a', 'n', 't', 'o'],
              ['z', 'qu', 'i', 'k'],
              ['e', 'p', 'c', 'x']]
+
     board_graph = board_to_graph(board)
-    board_lookup = get_board_coord_to_letter_lookup_hash(board)
 
     words = []
-    for key1 in board_graph:
-        for key2 in board_graph:
-            if key1 == key2: continue
-            paths, new_words = find_all_words(board_graph, key1, key2, dictionary, board_lookup)
-            words.extend(new_words)
 
-    words.sort(key = lambda s: (len(s), s[0]))
+    # check for all paths between each pair of letters on the board
+    for letter1 in board_graph:
+        for letter2 in board_graph:
+            if letter1 == letter2: continue
+            new_words = find_all_words(board_graph, letter1, letter2, dictionary)
+            words.extend(new_words)
 
     pretty_print(set(words))
 
@@ -47,6 +47,8 @@ def get_board():
     return board
 
 def board_to_graph(board):
+    """convert the board into a graph represented using adjacency lists"""
+
     graph = {}
 
     coords_to_check = [(-1, -1), # up and to the left
@@ -63,13 +65,16 @@ def board_to_graph(board):
             # need a unique identifier for each tile in case there are duplicate letters
             tile_coord = get_unique_board_coord(row, col)
 
-            graph[tile_coord] = []
+            graph[tile_coord] = {
+                "letter": board[row][col],
+                "adjacent_letters": []
+            }
 
             for coord in coords_to_check:
                 row_to_check = row + coord[0]
                 col_to_check = col + coord[1]
                 if is_valid_coord(row_to_check, col_to_check):
-                    graph[tile_coord].append(get_unique_board_coord(row_to_check, col_to_check))
+                    graph[tile_coord]["adjacent_letters"].append(get_unique_board_coord(row_to_check, col_to_check))
 
     return graph
 
@@ -87,41 +92,38 @@ def is_valid_coord(row, col):
 
     return True
 
-def get_board_coord_to_letter_lookup_hash(board):
+def find_all_words(graph, starting_node, ending_node, dictionary, path = [], word = ''):
 
-    lookup = {}
-
-    for row in range(BOARD_SIZE):
-        for col in range(BOARD_SIZE):
-            tile_coord = get_unique_board_coord(row, col)
-            lookup[tile_coord] = board[row][col]
-
-    return lookup
-
-def find_all_words(graph, start, end, dictionary, lookup, path = []):
     # adapted from https://www.python.org/doc/essays/graphs/
-    path = path + [start]
-    if start == end:
-        return [path], [lookup[x] for x in path]
-    if not graph.has_key(start):
-        return [], []
-    paths = []
+
+    if starting_node == ending_node:
+        return [word]
+
+    if not graph.has_key(starting_node):
+        return []
+
+    path = path + [starting_node]
+    word = word + graph[starting_node]["letter"]
+
     words = []
-    for node in graph[start]:
+
+    adjacent_letters = graph[starting_node]["adjacent_letters"]
+    for node in adjacent_letters:
+
         if node not in path:
-            newpaths, new_words = find_all_words(graph, node, end, dictionary, lookup, path)
-            for newpath in newpaths:
-                potential_word = "".join(lookup[x] for x in newpath)
-                paths.append(newpath)
-                if is_word(potential_word, dictionary):
-                    words.append(potential_word)
-    return paths, words
+            new_words = find_all_words(graph, node, ending_node, dictionary, path, word)
+
+            for w in new_words:
+                if is_word(w, dictionary):
+                    words.append(w)
+
+    return words
 
 def is_word(word, dictionary):
 
     try:
-        first_letter = word[:1]
-        first_two_letters = word[:2]
+        first_letter = word[:1].upper()
+        first_two_letters = word[:2].upper()
         dictionary[first_letter][first_two_letters][word]
     except KeyError:
         return False
@@ -143,6 +145,8 @@ def pretty_print(words):
             if row >= len(words_by_length[col]): continue
             print words_by_length[col][row] + "  ",
         print
+
+    print
 
 def group_words_by_length(words):
 
