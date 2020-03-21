@@ -1,31 +1,6 @@
 #!/Users/daltkorn5/compsci/anaconda3/bin/python
-
 import json
-
-BOARD_SIZE = 4
-
-
-def main():
-    dictionary = load_dictionary()
-
-    # board = get_board()
-    board = [['d', 'e', 'l', 'b'],
-             ['a', 'n', 't', 'o'],
-             ['z', 'qu', 'i', 'k'],
-             ['e', 'p', 'c', 'x']]
-
-    board_graph = board_to_graph(board)
-
-    words = []
-
-    # check for all paths between each pair of letters on the board
-    for letter1 in board_graph:
-        for letter2 in board_graph:
-            if letter1 == letter2: continue
-            new_words = find_all_words(board_graph, letter1, letter2, dictionary)
-            words.extend(new_words)
-
-    pretty_print(set(words))
+from time import time
 
 
 def load_dictionary():
@@ -35,128 +10,192 @@ def load_dictionary():
     return words
 
 
-def get_board():
-    print("Enter your board. After entering one row, hit enter")
+def get_board(size=4):
+    print("Enter your board. Put a space after each letter. After entering one row, hit enter")
     board = []
     i = 0
 
-    while i < BOARD_SIZE:
+    while i < size:
         board.append(input().split())
         i += 1
 
     return board
 
 
-def board_to_graph(board):
-    """convert the board into a graph represented using adjacency lists"""
+def make_node(coord, letter, word, path):
+    """Function to make a node for the graph that we'll use to traverse the game board.
 
-    graph = {}
-
-    coords_to_check = [(-1, -1),  # up and to the left
-                       (-1, 0),  # directly to the left
-                       (-1, 1),  # down and to the left
-                       (0, 1),  # directly down
-                       (1, 1),  # down and to the right
-                       (1, 0),  # directly to the right
-                       (1, -1),  # down and to the right
-                       (0, -1)]  # directly up
-
-    for row in range(BOARD_SIZE):
-        for col in range(BOARD_SIZE):
-            # need a unique identifier for each tile in case there are duplicate letters
-            tile_coord = get_unique_board_coord(row, col)
-
-            graph[tile_coord] = {
-                "letter": board[row][col],
-                "adjacent_letters": []
-            }
-
-            for coord in coords_to_check:
-                row_to_check = row + coord[0]
-                col_to_check = col + coord[1]
-                if is_valid_coord(row_to_check, col_to_check):
-                    graph[tile_coord]["adjacent_letters"].append(get_unique_board_coord(row_to_check, col_to_check))
-
-    return graph
+    :param coord: The (x, y) coordinate on the board
+    :param letter: The letter at coord
+    :param word: The letters seen so far on our way to coord
+    :param path: The coordinates visited on our way to coord
+    :return: A dict representing a node in the graph
+    """
+    return dict(coord=coord, letter=letter, word=word, path=path)
 
 
-def get_unique_board_coord(row, col):
-    return BOARD_SIZE * row + col
+def get_letter(coord, board):
+    """Function to get a letter on the board given the coordinate
+
+    :param coord: The (x, y) coordinate whose letter we want
+    :param board: The game board
+    :return: The letter at the given coordinate
+    """
+    x, y = coord
+    return board[y][x]
 
 
-def is_valid_coord(row, col):
-    if row < 0 or row >= BOARD_SIZE:
+def is_goal(current_node, goal):
+    return current_node['coord'] == goal
+
+
+def get_possible_moves():
+    return [
+        (-1, -1),  # up and to the left
+        (-1, 0),  # directly to the left
+        (-1, 1),  # down and to the left
+        (0, 1),  # directly down
+        (1, 1),  # down and to the right
+        (1, 0),  # directly to the right
+        (1, -1),  # down and to the right
+        (0, -1)  # directly up
+    ]
+
+
+def is_valid_move(x_to_check, y_to_check, path, board):
+    if x_to_check < 0 or x_to_check >= len(board[0]):
         return False
 
-    if col < 0 or col >= BOARD_SIZE:
+    if y_to_check < 0 or y_to_check >= len(board):
+        return False
+
+    #  This check makes sure we don't revisit a coordinate while traversing a given path
+    if (x_to_check, y_to_check) in path:
         return False
 
     return True
 
 
-def find_all_words(graph, starting_node, ending_node, dictionary, path=[], word=''):
-    # adapted from https://www.python.org/doc/essays/graphs/
+def get_successors(current_node, board):
+    possible_moves = get_possible_moves()
+    successors = []
+    
+    for move in possible_moves:
+        current_coord = current_node['coord']
+        x_to_check = current_coord[0] + move[0]
+        y_to_check = current_coord[1] + move[1]
 
-    if starting_node == ending_node:
-        return [word]
+        if is_valid_move(x_to_check, y_to_check, current_node['path'], board):
+            new_coord = (x_to_check, y_to_check)
+            new_letter = get_letter(new_coord, board)
+            new_node = make_node(new_coord, new_letter,
+                                 current_node['word'] + new_letter, current_node['path'] + [new_coord])
 
-    if not graph.has_key(starting_node):
-        return []
+            successors.append(new_node)
 
-    path = path + [starting_node]
-    word = word + graph[starting_node]["letter"]
-
-    words = []
-
-    adjacent_letters = graph[starting_node]["adjacent_letters"]
-    for node in adjacent_letters:
-
-        if node not in path:
-            new_words = find_all_words(graph, node, ending_node, dictionary, path, word)
-
-            for w in new_words:
-                if is_word(w, dictionary):
-                    words.append(w)
-
-    return words
+    return successors
 
 
-def is_word(word, dictionary):
+def check_is_real_word(potential_word, dictionary):
     try:
-        first_letter = word[:1].upper()
-        first_two_letters = word[:2].upper()
-        dictionary[first_letter][first_two_letters][word]
+        first_letter = potential_word[:1].upper()
+        first_two_letters = potential_word[:2].upper()
+        dictionary[first_letter][first_two_letters][potential_word]
     except KeyError:
         return False
 
     return True
 
 
-def pretty_print(words):
-    print()  # newline to separate from board input
+def path_is_fruitful(word, dictionary):
+    """Function to see if this path is worth continuing down
 
-    words_by_length = group_words_by_length(words)
+    :param word:
+    """
+    if len(word) < 2:
+        return True
 
-    longest_word_length = max(key for key in words_by_length)
-    group_with_most_words = max(words_by_length, key=lambda x: len(words_by_length[x]))
+    first_letter = word[:1].upper()
+    first_two_letters = word[:2].upper()
+    if first_two_letters not in dictionary[first_letter]:
+        return False
 
-    for row in range(len(words_by_length[group_with_most_words])):
-        for col in range(3, longest_word_length + 1):
+    return True
 
-            if row >= len(words_by_length[col]): continue
-            print(words_by_length[col][row] + "  ", end="")
-        print()
 
-    print()
+def get_all_paths(start, goal, words, board, dictionary):
+    """Function to get all paths between the start coord and the goal coord.
+
+    We'll use a Breadth-First-Search approach for traversing our graph. As we're not trying to find the
+    most efficient path between the start and the goal, we don't need to use an informed search like A*.
+
+    :param start: The starting coordinate
+    :param goal: The goal coordinate
+    :param words: List of valid words we've found in our search
+    :param board: The game board
+    :param dictionary: The game dictionary (like a real dictionary, not a python object)
+    """
+    if start == goal:
+        return
+    starting_letter = get_letter(start, board)
+    initial_node = make_node(start, starting_letter, starting_letter, [start])
+    frontier = [initial_node]  # The frontier of our BFS, a list of which coordinates will be checked next
+
+    while len(frontier) > 0:
+        # Since BFS uses a FIFO queue for choosing its next node to explore
+        # we pop off the last node in the frontier list
+        current_node = frontier.pop()
+
+        # Note that we're not returning here because we want to find *all paths*, and not finish our search
+        # as soon as the goal is reached
+        if is_goal(current_node, goal):
+            potential_word = current_node['word']
+            if check_is_real_word(potential_word, dictionary):
+                words.append(potential_word)
+
+        successors = get_successors(current_node, board)
+        for successor in successors:
+            if path_is_fruitful(successor['word'], dictionary):
+                frontier.insert(0, successor)
 
 
 def group_words_by_length(words):
-    words_group = {}
-    for w in words:
-        if len(w) not in words_group: words_group[len(w)] = []
-        words_group[len(w)].append(w)
+    grouped = {}
+    for word in words:
+        grouped.setdefault(len(word), []).append(word)
 
-    return words_group
+    return grouped
+
+
+def pretty_print(words):
+    grouped_words = group_words_by_length(words)
+    for length, word_list in sorted(grouped_words.items()):
+        print(", ".join(sorted(word_list)))
+
+
+def main():
+    dictionary = load_dictionary()
+
+    # board = get_board()
+    # board = [['d', 'e', 'l', 'b'],
+    #          ['a', 'n', 't', 'o'],
+    #          ['z', 'qu', 'i', 'k'],
+    #          ['e', 'p', 'c', 'x']]
+    board = [['d', 'e', 'l'],
+             ['a', 'n', 't'],
+             ['z', 'qu', 'i']]
+
+    words = []
+
+    st = time()
+    coords = [(x, y) for y in range(len(board)) for x in range(len(board[0]))]
+    for start in coords:
+        for goal in coords:
+            get_all_paths(start, goal, words, board, dictionary)
+
+    pretty_print(set(words))
+    end = time()
+    print(end - st)
 
 
 if __name__ == '__main__':
