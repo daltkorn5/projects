@@ -1,14 +1,14 @@
-#!/usr/bin/python
+#!/Users/daltkorn5/compsci/anaconda3/bin/python
 
 import json
 
 BOARD_SIZE = 4
 
-def main():
 
+def main():
     dictionary = load_dictionary()
 
-    #board = get_board()
+    # board = get_board()
     board = [['d', 'e', 'l', 'b'],
              ['a', 'n', 't', 'o'],
              ['z', 'qu', 'i', 'k'],
@@ -27,38 +27,39 @@ def main():
 
     pretty_print(set(words))
 
-def load_dictionary():
 
+def load_dictionary():
     with open('dictionary.json') as f:
         words = json.load(f)
 
     return words
 
-def get_board():
 
-    print "Enter your board. After entering one row, hit enter"
+def get_board():
+    print("Enter your board. After entering one row, hit enter")
     board = []
     i = 0
 
     while i < BOARD_SIZE:
-        board.append(raw_input().split())
+        board.append(input().split())
         i += 1
 
     return board
+
 
 def board_to_graph(board):
     """convert the board into a graph represented using adjacency lists"""
 
     graph = {}
 
-    coords_to_check = [(-1, -1), # up and to the left
-                       (-1,  0), # directly to the left
-                       (-1,  1), # down and to the left
-                       (0,   1), # directly down
-                       (1,   1), # down and to the right
-                       (1,   0), # directly to the right
-                       (1,  -1), # down and to the right
-                       (0,  -1)] # directly up
+    coords_to_check = [(-1, -1),  # up and to the left
+                       (-1, 0),  # directly to the left
+                       (-1, 1),  # down and to the left
+                       (0, 1),  # directly down
+                       (1, 1),  # down and to the right
+                       (1, 0),  # directly to the right
+                       (1, -1),  # down and to the right
+                       (0, -1)]  # directly up
 
     for row in range(BOARD_SIZE):
         for col in range(BOARD_SIZE):
@@ -78,12 +79,12 @@ def board_to_graph(board):
 
     return graph
 
-def get_unique_board_coord(row, col):
 
+def get_unique_board_coord(row, col):
     return BOARD_SIZE * row + col
 
-def is_valid_coord(row, col):
 
+def is_valid_coord(row, col):
     if row < 0 or row >= BOARD_SIZE:
         return False
 
@@ -92,8 +93,8 @@ def is_valid_coord(row, col):
 
     return True
 
-def find_all_words(graph, starting_node, ending_node, dictionary, path = [], word = ''):
 
+def find_all_words(graph, starting_node, ending_node, dictionary, path=[], word=''):
     # adapted from https://www.python.org/doc/essays/graphs/
 
     if starting_node == ending_node:
@@ -119,8 +120,8 @@ def find_all_words(graph, starting_node, ending_node, dictionary, path = [], wor
 
     return words
 
-def is_word(word, dictionary):
 
+def is_word(word, dictionary):
     try:
         first_letter = word[:1].upper()
         first_two_letters = word[:2].upper()
@@ -130,26 +131,26 @@ def is_word(word, dictionary):
 
     return True
 
-def pretty_print(words):
 
-    print # newline to separate from board input
+def pretty_print(words):
+    print()  # newline to separate from board input
 
     words_by_length = group_words_by_length(words)
 
     longest_word_length = max(key for key in words_by_length)
-    group_with_most_words = max(words_by_length, key = lambda x: len(words_by_length[x]))
+    group_with_most_words = max(words_by_length, key=lambda x: len(words_by_length[x]))
 
     for row in range(len(words_by_length[group_with_most_words])):
         for col in range(3, longest_word_length + 1):
 
             if row >= len(words_by_length[col]): continue
-            print words_by_length[col][row] + "  ",
-        print
+            print(words_by_length[col][row] + "  ", end="")
+        print()
 
-    print
+    print()
+
 
 def group_words_by_length(words):
-
     words_group = {}
     for w in words:
         if len(w) not in words_group: words_group[len(w)] = []
