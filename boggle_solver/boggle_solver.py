@@ -11,7 +11,7 @@ def load_dictionary():
 
 
 def get_board(size=4):
-    print("Enter your board. Put a space after each letter. After entering one row, hit enter")
+    print("Enter your board. Put a space after each tile. After entering one row, hit enter")
     board = []
     i = 0
 
@@ -96,35 +96,22 @@ def get_successors(current_node, board):
     return successors
 
 
-def check_is_real_word(potential_word, dictionary):
-    try:
-        first_letter = potential_word[:1].upper()
-        first_two_letters = potential_word[:2].upper()
-        dictionary[first_letter][first_two_letters][potential_word]
-    except KeyError:
-        return False
+def check_is_search_fruitful(potential_word, words, dictionary):
+    current_dict = dictionary
+    for letter in potential_word.upper():
+        if letter not in current_dict:
+            return False
+
+        current_dict = current_dict[letter]
+
+    if "end" in current_dict:
+        words.append(potential_word)
 
     return True
 
 
-def path_is_fruitful(word, dictionary):
-    """Function to see if this path is worth continuing down
-
-    :param word:
-    """
-    if len(word) < 2:
-        return True
-
-    first_letter = word[:1].upper()
-    first_two_letters = word[:2].upper()
-    if first_two_letters not in dictionary[first_letter]:
-        return False
-
-    return True
-
-
-def get_all_paths(start, goal, words, board, dictionary):
-    """Function to get all paths between the start coord and the goal coord.
+def find_all_words(start, goal, words, board, dictionary):
+    """Function to find all the words between the starting letter and the goal letter.
 
     We'll use a Breadth-First-Search approach for traversing our graph. As we're not trying to find the
     most efficient path between the start and the goal, we don't need to use an informed search like A*.
@@ -146,16 +133,9 @@ def get_all_paths(start, goal, words, board, dictionary):
         # we pop off the last node in the frontier list
         current_node = frontier.pop()
 
-        # Note that we're not returning here because we want to find *all paths*, and not finish our search
-        # as soon as the goal is reached
-        if is_goal(current_node, goal):
-            potential_word = current_node['word']
-            if check_is_real_word(potential_word, dictionary):
-                words.append(potential_word)
-
         successors = get_successors(current_node, board)
         for successor in successors:
-            if path_is_fruitful(successor['word'], dictionary):
+            if check_is_search_fruitful(successor['word'], words, dictionary):
                 frontier.insert(0, successor)
 
 
@@ -176,14 +156,14 @@ def pretty_print(words):
 def main():
     dictionary = load_dictionary()
 
-    # board = get_board()
+    board = get_board()
     # board = [['d', 'e', 'l', 'b'],
     #          ['a', 'n', 't', 'o'],
     #          ['z', 'qu', 'i', 'k'],
     #          ['e', 'p', 'c', 'x']]
-    board = [['d', 'e', 'l'],
-             ['a', 'n', 't'],
-             ['z', 'qu', 'i']]
+    # board = [['d', 'e', 'l'],
+    #          ['a', 'n', 't'],
+    #          ['z', 'qu', 'i']]
 
     words = []
 
@@ -191,7 +171,7 @@ def main():
     coords = [(x, y) for y in range(len(board)) for x in range(len(board[0]))]
     for start in coords:
         for goal in coords:
-            get_all_paths(start, goal, words, board, dictionary)
+            find_all_words(start, goal, words, board, dictionary)
 
     pretty_print(set(words))
     end = time()
