@@ -5,6 +5,7 @@ for each album, and then writes out the track, album title, and other metadata t
 from bs4 import BeautifulSoup
 from urllib.request import urlopen
 import csv
+import time
 
 
 def scrape_tracks(title_url, *album_metadata):
@@ -24,7 +25,10 @@ def scrape_tracks(title_url, *album_metadata):
 
     rows = soup.find_all('tr', {'class': 'track'})
     for row in rows:
-        track = row.find('td', {'class': 'track'}).get_text().strip()
+        track = row.\
+            find('td', {'class': 'tracklist_track_title'}).\
+            find('span', {'class': 'tracklist_track_title'}).\
+            get_text().strip()
         tracks.append((track, *album_metadata))
 
     return tracks
